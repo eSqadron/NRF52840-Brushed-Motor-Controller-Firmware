@@ -58,7 +58,7 @@ config POSITION_CONTROL_MODIFIER
 config POS_CONTROL_MIN_SPEED_MODIFIER
 	int "divider for minimal speed during position control. \
 	     Max speed is taken and divied by this value"
-	default 8
+	default 12
 
 config POS_CONTROL_PRECISION_MODIFIER
 	int "divider for precision of position control.\

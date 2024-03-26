@@ -47,7 +47,7 @@ struct DriverChannel {
 	const struct gpio_dt_spec set_dir_pins[PINS_PER_CHANNEL];
 	/// enc in
 	const struct gpio_dt_spec enc_pins[PINS_PER_CHANNEL];
-	struct gpio_callback enc_cb;
+	struct gpio_callback enc_cb[PINS_PER_CHANNEL];
 
 	/// ENCODER - variables used for actual speed calculation based on encoder pin and
 	// timer interrupts
@@ -77,11 +77,20 @@ struct DriverChannel {
 static struct DriverChannel drv_chnls[CONFIG_SUPPORTED_CHANNEL_NUMBER] = {
 	{
 		.max_pos = 360u * CONFIG_POSITION_CONTROL_MODIFIER,
-		.pwm_motor_driver = PWM_DT_SPEC_GET(DT_ALIAS(pwm_drv_ch1)),
-		.set_dir_pins[P0] = GPIO_DT_SPEC_GET(DT_ALIAS(set_dir_p1_ch1), gpios),
-		.set_dir_pins[P1] = GPIO_DT_SPEC_GET(DT_ALIAS(set_dir_p2_ch1), gpios),
-		.enc_pins[P0] = GPIO_DT_SPEC_GET(DT_ALIAS(get_enc_p1_ch1), gpios),
-		.enc_pins[P1] = GPIO_DT_SPEC_GET(DT_ALIAS(get_enc_p2_ch1), gpios),
+		.pwm_motor_driver =  PWM_DT_SPEC_GET_BY_IDX(DT_ALIAS(pwm_drv), 0),
+		.set_dir_pins[P0] = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(set_dir_p1), gpios, 0),
+		.set_dir_pins[P1] = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(set_dir_p2), gpios, 0),
+		.enc_pins[P0] = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(get_enc_p1), gpios, 0),
+		.enc_pins[P1] = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(get_enc_p2), gpios, 0),
+		.actual_dir = STOPPED
+	},
+	{
+		.max_pos = 360u * CONFIG_POSITION_CONTROL_MODIFIER,
+		.pwm_motor_driver =  PWM_DT_SPEC_GET_BY_IDX(DT_ALIAS(pwm_drv), 1),
+		.set_dir_pins[P0] = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(set_dir_p1), gpios, 1),
+		.set_dir_pins[P1] = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(set_dir_p2), gpios, 1),
+		.enc_pins[P0] = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(get_enc_p1), gpios, 1),
+		.enc_pins[P1] = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(get_enc_p2), gpios, 1),
 		.actual_dir = STOPPED
 	}
 };
@@ -236,7 +245,11 @@ static void enc_callback_wrapper(const struct device *dev, struct gpio_callback 
 {
 	for (int channel = 0; channel < CONFIG_SUPPORTED_CHANNEL_NUMBER; ++channel) {
 		for (int pin = 0; pin < PINS_PER_CHANNEL; ++pin) {
-			if (pins & BIT(drv_chnls[channel].enc_pins[pin].pin)) {
+			if ((pins & BIT(drv_chnls[channel].enc_pins[pin].pin)) &&
+			    dev == drv_chnls[channel].enc_pins[pin].port) {
+
+				// printk("CH:%d, P:%d\n", channel, pin);
+
 				drv_chnls[channel].prev_val_enc[pin] =
 					gpio_pin_get(dev, drv_chnls[channel].enc_pins[pin].pin);
 				enc_callback(channel, pin);
@@ -303,14 +316,13 @@ void init_pwm_motor_driver(void)
 			drv_chnls[channel].prev_val_enc[pin] =
 				gpio_pin_get(drv_chnls[channel].enc_pins[pin].port,
 							 drv_chnls[channel].enc_pins[pin].pin);
-		}
 
-		gpio_init_callback(&(drv_chnls[channel].enc_cb),
-					enc_callback_wrapper,
-					BIT(drv_chnls[channel].enc_pins[P0].pin) |
-					BIT(drv_chnls[channel].enc_pins[P1].pin));
-		gpio_add_callback(drv_chnls[channel].enc_pins[P0].port,
-					&(drv_chnls[channel].enc_cb));
+			gpio_init_callback(&(drv_chnls[channel].enc_cb[pin]),
+						enc_callback_wrapper,
+						BIT(drv_chnls[channel].enc_pins[pin].pin));
+			gpio_add_callback(drv_chnls[channel].enc_pins[pin].port,
+						&(drv_chnls[channel].enc_cb[pin]));
+		}
 	}
 
 	k_timer_start(&continuous_calculation_timer, K_MSEC(CONFIG_ENC_TIMER_PERIOD_MS),
@@ -345,6 +357,7 @@ return_codes_t motor_on(enum MotorDirection direction, enum ChannelNumber chnl)
 	}
 
 	drv_chnls[chnl].is_motor_on = true;
+
 	return SUCCESS;
 }
 return_codes_t motor_off(enum ChannelNumber chnl)
@@ -425,7 +438,7 @@ static int speed_pwm_set(uint32_t value, enum ChannelNumber chnl)
 		return ERR_DESIRED_VALUE_TO_HIGH;
 	}
 
-	if (drv_chnls[chnl].target_speed_mrpm < CONFIG_SPEED_MAX_MRPM / 10) {
+	if (drv_chnls[chnl].target_speed_mrpm < CONFIG_POS_CONTROL_MIN_SPEED_MODIFIER ) {
 		value = 0;
 		drv_chnls[chnl].speed_control = 0;
 	}

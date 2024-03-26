@@ -2,45 +2,51 @@
 	status="disabled";
 };
 
+//Hardware v 1.X
 
 / {
 	pwmdrv {
 		compatible = "pwm-leds";
-		pwm_drv_ch1: pwm_drv_ch1 {
-			pwms = <&pwm1 0 PWM_MSEC(20) 0>;
+		pwm_drv: pwm_drv {
+			pwms = <&pwm1 0 PWM_MSEC(20) 0>,
+			       <&pwm1 1 PWM_MSEC(20) 0>;
 		};
 	};
 
 	gpio_pins {
 		compatible = "gpio-leds";
-		set_dir_p1_ch1: set_dir_p1_ch1 {
-			gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+		set_dir_p1: set_dir_p1 {
+			gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>,
+				<&gpio1 0 GPIO_ACTIVE_HIGH>;
 		};
 
-		set_dir_p2_ch1: set_dir_p2_ch1 {
-			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+		set_dir_p2: set_dir_p2 {
+			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>,
+				<&gpio0  9 GPIO_ACTIVE_HIGH>;
 		};
 
 		enter_boot_p: enter_boot_p {
 			gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>;
 		};
 
-		get_enc_p1_ch1: get_enc_p1_ch1 {
-			gpios = <&gpio1 15 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+		get_enc_p1: get_enc_p1 {
+			gpios = <&gpio1 15 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+				<&gpio1 10 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
 		};
 
-		get_enc_p2_ch1: get_enc_p2_ch1 {
-			gpios = <&gpio1 13 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+		get_enc_p2: get_enc_p2 {
+			gpios = <&gpio1 13 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+				<&gpio0 10 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
 		};
 	};
 
 	aliases {
-		pwm-drv-ch1 = &pwm_drv_ch1;
-		set-dir-p1-ch1 = &set_dir_p1_ch1;
-		set-dir-p2-ch1 = &set_dir_p2_ch1;
+		pwm-drv = &pwm_drv;
+		set-dir-p1 = &set_dir_p1;
+		set-dir-p2 = &set_dir_p2;
 		enter-boot-p = &enter_boot_p;
-		get-enc-p1-ch1 = &get_enc_p1_ch1;
-		get-enc-p2-ch1 = &get_enc_p2_ch1;
+		get-enc-p1 = &get_enc_p1;
+		get-enc-p2 = &get_enc_p2;
 	};
 
 };
@@ -48,13 +54,15 @@
 &pinctrl{
 	pwm1_default: pwm1_default {
 		group1 {
-			psels = <NRF_PSEL(PWM_OUT0, 0, 29)>;
+			psels = <NRF_PSEL(PWM_OUT0, 0, 15)>,
+				<NRF_PSEL(PWM_OUT1, 0, 13)>;
 			nordic,invert;
 		};
 	};
 	pwm1_sleep: pwm1_sleep {
 		group1 {
-			psels = <NRF_PSEL(PWM_OUT0, 0, 29)>;
+			psels = <NRF_PSEL(PWM_OUT0, 0, 15)>,
+				<NRF_PSEL(PWM_OUT1, 0, 13)>;
 			low-power-enable;
 		};
 	};
